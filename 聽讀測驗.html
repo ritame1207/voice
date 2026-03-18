@@ -1,0 +1,237 @@
+html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>印尼文拼寫練習 Pro</title>
+    <style>
+        :root { --primary: #3498db; --success: #2ecc71; --danger: #e74c3c; --dark: #2c3e50; --bg: #f8f9fa; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; }
+        
+        .container { background: white; padding: 1.5rem; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 450px; text-align: center; }
+        
+        .status-bar { display: flex; justify-content: space-between; margin-bottom: 10px; color: #7f8c8d; font-size: 0.85rem; font-weight: bold; }
+        
+        .meaning { font-size: 1.8rem; color: var(--dark); margin: 5px 0; font-weight: 800; }
+        .audio-btn { font-size: 1.2rem; cursor: pointer; background: #9b59b6; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; margin-bottom: 10px; }
+
+        /* 字數提示與輸入顯示 */
+        .display-answer { 
+            font-size: 1.8rem; min-height: 3rem; margin: 15px 0; letter-spacing: 4px; 
+            color: var(--primary); font-weight: bold; font-family: monospace;
+            display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+        }
+        .letter-slot { border-bottom: 3px solid #ddd; margin: 0 4px; min-width: 20px; display: inline-block; }
+        .letter-filled { border-bottom-color: var(--primary); }
+
+        #feedback { height: 24px; margin-bottom: 10px; font-weight: bold; font-size: 0.95rem; }
+
+        /* 虛擬小寫鍵盤 */
+        .keyboard { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .key { 
+            padding: 12px 0; background: white; border: 1px solid #e0e0e0; border-radius: 8px; 
+            font-size: 1.1rem; cursor: pointer; box-shadow: 0 3px 0 #eee; text-transform: lowercase;
+        }
+        .key:active { transform: translateY(2px); box-shadow: none; background: #f0f0f0; }
+        .key.special { background: #bdc3c7; color: white; grid-column: span 2; font-size: 0.85rem; }
+        .key.submit { background: var(--success); color: white; grid-column: span 3; font-weight: bold; }
+
+        /* 錯誤紀錄區 */
+        .error-log { margin-top: 20px; text-align: left; background: #fff5f5; padding: 12px; border-radius: 12px; border: 1px solid #fed7d7; display: none; }
+        .error-log h4 { margin: 0 0 8px 0; color: var(--danger); font-size: 0.9rem; }
+        .error-item { font-size: 0.85rem; color: #c53030; display: flex; justify-content: space-between; border-bottom: 1px dashed #feb2b2; padding: 4px 0; }
+
+        .btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .btn-tool { background: none; border: none; color: #bdc3c7; text-decoration: underline; cursor: pointer; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="status-bar">
+        <span>Score: <span id="score-display">0</span></span>
+        <span id="word-count">0 words</span>
+    </div>
+
+    <button class="audio-btn" onclick="speakWord()">🔊</button>
+    <div class="meaning" id="target-meaning">載入中...</div>
+    
+    <!-- 顯示字數提示 -->
+    <div class="display-answer" id="user-display"></div>
+    <div id="feedback"></div>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <!-- 錯誤紀錄面板 -->
+    <div id="error-panel" class="error-log">
+        <h4>⚠️ 歷史錯誤 (需多練習)</h4>
+        <div id="error-list"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-tool" onclick="toggleSection('admin-section')">⚙️ 管理題庫</button>
+        <button class="btn-tool" onclick="toggleSection('error-panel')">❌ 錯誤紀錄</button>
+    </div>
+
+    <div id="admin-section" style="display:none; margin-top:15px; text-align:left;">
+        <input type="text" id="new-word" placeholder="印尼文" style="width:70%; padding:5px;">
+        <input type="text" id="new-mean" placeholder="中文" style="width:70%; padding:5px; margin-top:5px;">
+        <button onclick="addNewWord()" style="margin-top:5px;">新增</button>
+        <div id="word-list" style="max-height: 100px; overflow-y: auto; font-size: 0.8rem; margin-top:10px;"></div>
+    </div>
+</div>
+
+<script>
+    const defaultWords = [
+        { id: "halo", zh: "你好" }, { id: "makan", zh: "吃" }, { id: "minum", zh: "喝" },
+        { id: "saya", zh: "我" }, { id: "kamu", zh: "你" }, { id: "terima kasih", zh: "謝謝" }
+    ];
+
+    let wordBank = JSON.parse(localStorage.getItem('indoWords')) || defaultWords;
+    let errorBank = JSON.parse(localStorage.getItem('indoErrors')) || {}; // 格式: { "makan": 2 }
+    let currentIdx = 0;
+    let score = 0;
+    let currentInput = "";
+
+    function init() {
+        createKeyboard();
+        updateWordCount();
+        renderWordList();
+        renderErrorList();
+        nextQuestion();
+    }
+
+    function createKeyboard() {
+        const kb = document.getElementById('keyboard');
+        const alphabet = "abcdefghijklmnopqrstuvwxyz- ".split("");
+        let html = alphabet.map(char => `<button class="key" onclick="pressKey('${char}')">${char===" "?"␣":char}</button>`).join('');
+        html += `<button class="key special" onclick="pressKey('BACK')">刪除</button>`;
+        html += `<button class="key special" onclick="pressKey('CLEAR')">清除</button>`;
+        html += `<button class="key submit" onclick="checkAnswer()">提交</button>`;
+        kb.innerHTML = html;
+    }
+
+    function nextQuestion() {
+        if (wordBank.length === 0) return;
+        currentIdx = Math.floor(Math.random() * wordBank.length);
+        document.getElementById('target-meaning').innerText = wordBank[currentIdx].zh;
+        currentInput = "";
+        updateDisplay();
+        document.getElementById('feedback').innerText = "";
+        setTimeout(speakWord, 400);
+    }
+
+    // 更新顯示：包含底線提示
+    function updateDisplay() {
+        const target = wordBank[currentIdx].id.toLowerCase();
+        const displayDiv = document.getElementById('user-display');
+        displayDiv.innerHTML = "";
+
+        for (let i = 0; i < target.length; i++) {
+            const char = currentInput[i] || "";
+            const slot = document.createElement('span');
+            slot.className = `letter-slot ${char ? 'letter-filled' : ''}`;
+            slot.innerText = char === " " ? "\u00A0" : char; // 空格處理
+            displayDiv.appendChild(slot);
+        }
+    }
+
+    function pressKey(key) {
+        const targetLen = wordBank[currentIdx].id.length;
+        if (key === 'BACK') {
+            currentInput = currentInput.slice(0, -1);
+        } else if (key === 'CLEAR') {
+            currentInput = "";
+        } else if (currentInput.length < targetLen) {
+            currentInput += key.toLowerCase();
+        }
+        updateDisplay();
+    }
+
+    function checkAnswer() {
+        const correctVal = wordBank[currentIdx].id.toLowerCase().trim();
+        const fb = document.getElementById('feedback');
+
+        if (currentInput.trim() === correctVal) {
+            fb.innerText = "正確 ✨"; fb.style.color = "var(--success)";
+            score += 10;
+            document.getElementById('score-display').innerText = score;
+            setTimeout(nextQuestion, 1000);
+        } else {
+            fb.innerText = `不對喔！答案是: ${correctVal}`;
+            fb.style.color = "var(--danger)";
+            // 記錄錯誤
+            logError(wordBank[currentIdx]);
+        }
+    }
+
+    function logError(item) {
+        const key = item.id.toLowerCase();
+        errorBank[key] = (errorBank[key] || 0) + 1;
+        localStorage.setItem('indoErrors', JSON.stringify(errorBank));
+        renderErrorList();
+    }
+
+    function renderErrorList() {
+        const listDiv = document.getElementById('error-list');
+        const keys = Object.keys(errorBank);
+        if (keys.length === 0) {
+            listDiv.innerHTML = "<p style='font-size:0.7rem'>目前沒有錯誤紀錄</p>";
+            return;
+        }
+        listDiv.innerHTML = keys.map(k => `
+            <div class="error-item">
+                <span>${k}</span>
+                <span>錯 ${errorBank[k]} 次</span>
+            </div>
+        `).join('');
+    }
+
+    function speakWord() {
+        const msg = new SpeechSynthesisUtterance(wordBank[currentIdx].id);
+        msg.lang = 'id-ID';
+        window.speechSynthesis.speak(msg);
+    }
+
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // --- 管理題庫邏輯 ---
+    function addNewWord() {
+        const word = document.getElementById('new-word').value.trim();
+        const mean = document.getElementById('new-mean').value.trim();
+        if (word && mean) {
+            wordBank.push({ id: word, zh: mean });
+            localStorage.setItem('indoWords', JSON.stringify(wordBank));
+            updateWordCount(); renderWordList();
+            document.getElementById('new-word').value = ""; document.getElementById('new-mean').value = "";
+        }
+    }
+
+    function renderWordList() {
+        document.getElementById('word-list').innerHTML = wordBank.map((item, i) => `
+            <div style="display:flex; justify-content:space-between">
+                <span>${item.id}</span><span onclick="deleteWord(${i})" style="cursor:pointer; color:red">✕</span>
+            </div>
+        `).join('');
+    }
+
+    function deleteWord(i) {
+        wordBank.splice(i, 1);
+        localStorage.setItem('indoWords', JSON.stringify(wordBank));
+        updateWordCount(); renderWordList();
+    }
+
+    function updateWordCount() {
+        document.getElementById('word-count').innerText = `${wordBank.length} words`;
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
