@@ -3,75 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>印尼盾百億級聽力挑戰</title>
+    <title>印尼盾百億級聽力挑戰 - 強化版</title>
     <style>
-        :root { --primary: #c62828; --accent: #1565c0; --success: #2e7d32; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #263238; color: #eceff1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: #37474f; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; width: 95%; max-width: 600px; border: 1px solid #546e7a; }
+        :root { --primary: #c62828; --accent: #1565c0; --success: #2e7d32; --bg: #263238; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #eceff1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #37474f; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; width: 95%; max-width: 600px; border: 1px solid #546e7a; }
         .level-badge { background: #ffca28; color: #000; padding: 5px 15px; border-radius: 10px; font-weight: bold; font-size: 0.9rem; margin-bottom: 15px; display: inline-block; text-transform: uppercase; }
         h1 { margin: 10px 0; font-size: 1.8rem; letter-spacing: 1px; }
-        .btn-group { display: flex; justify-content: center; gap: 25px; margin: 30px 0; }
-        .main-btn { width: 80px; height: 80px; border-radius: 50%; border: none; cursor: pointer; font-size: 2rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-        #play-btn { background: var(--primary); color: white; box-shadow: 0 0 20px rgba(198,40,40,0.4); }
-        #next-btn { background: var(--accent); color: white; box-shadow: 0 0 20px rgba(21,101,192,0.4); }
-        .main-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .btn-group { display: flex; justify-content: center; gap: 20px; margin: 25px 0; }
+        .main-btn { width: 70px; height: 70px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.8rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+        #play-btn { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(198,40,40,0.4); }
+        #next-btn { background: var(--accent); color: white; }
+        .main-btn:active { transform: scale(0.9); }
+        
+        /* 選項區塊：增加隱藏邏輯 */
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; transition: opacity 0.5s; }
         @media (min-width: 480px) { .options-grid { grid-template-columns: 1fr 1fr; } }
         .opt { background: #455a64; border: 2px solid #546e7a; padding: 18px; border-radius: 15px; cursor: pointer; font-size: 1.1rem; color: white; font-weight: 600; transition: 0.2s; }
         .opt:hover { border-color: #ffca28; background: #546e7a; }
-        .display-area { margin-top: 25px; min-height: 120px; padding: 15px; border-radius: 15px; background: rgba(0,0,0,0.2); }
-        .correct-msg { color: #81c784; font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
-        .wrong-msg { color: #e57373; font-weight: bold; }
-        .spell-out { font-size: 1rem; color: #b0bec5; line-height: 1.4; font-style: italic; display: block; margin-top: 10px; }
+        .hidden { opacity: 0; pointer-events: none; }
+
+        .display-area { margin-top: 25px; min-height: 100px; padding: 20px; border-radius: 15px; background: rgba(0,0,0,0.3); border: 1px dashed #546e7a; }
+        .correct-msg { color: #81c784; font-size: 1.2rem; font-weight: bold; }
+        .spell-out { font-size: 1.1rem; color: #ffca28; margin-top: 10px; display: block; font-weight: bold; }
+        .control-panel { margin-top: 15px; font-size: 0.9rem; color: #90a4ae; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div id="unit-label" class="level-badge">準備開始</div>
-    <h1>印尼盾金額聽力 (進階版)</h1>
-    <p style="color: #b0bec5;">範圍：Rp 1.000 ~ Rp 10.000.000.000</p>
+    <h1>印尼盾聽力挑戰</h1>
+    <p style="color: #b0bec5; font-size: 0.9rem;">提示：聽完語音後選項才會出現</p>
     
     <div class="btn-group">
         <button id="play-btn" class="main-btn" title="聽發音">🔊</button>
         <button id="next-btn" class="main-btn" title="下一題">⏭️</button>
     </div>
 
-    <div class="options-grid" id="options"></div>
+    <div class="options-grid hidden" id="options"></div>
 
     <div class="display-area" id="display-area">
-        <span style="color: #78909c;">點擊 🔊 開始挑戰大面額聽力</span>
+        <span style="color: #78909c;">點擊紅色按鈕開始聽力測驗</span>
+    </div>
+
+    <div class="control-panel">
+        語速：<input type="range" id="rate-ctrl" min="0.5" max="1" step="0.1" value="0.7">
     </div>
 </div>
 
 <script>
     let currentAmount = 0;
+    let hasHeard = false;
     const synth = window.speechSynthesis;
 
-    // --- 金額產生器：涵蓋 1,000 到 10,000,000,000 ---
-    function generateHugeAmount() {
+    // --- 金額產生器 ---
+    function generateAmount() {
         const ranges = [
-            { min: 1000, max: 99000 },             // 千位到萬位
-            { min: 100000, max: 999000 },          // 十萬位
-            { min: 1000000, max: 99000000 },       // 百萬位到千萬位
-            { min: 100000000, max: 999000000 },    // 億位
-            { min: 1000000000, max: 10000000000 }  // 十億到百億位
+            { min: 1000, max: 99000 },             // Ribu
+            { min: 100000, max: 999000 },          // Ratus Ribu
+            { min: 1000000, max: 99000000 },       // Juta
+            { min: 100000000, max: 999000000 },    // Ratus Juta
+            { min: 1000000000, max: 10000000000 }  // Miliar
         ];
-        
         const range = ranges[Math.floor(Math.random() * ranges.length)];
-        // 確保數字漂亮點，不要出現太零碎的個位數
         const raw = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
-        const step = raw > 1000000 ? 100000 : (raw > 10000 ? 1000 : 100);
+        // 為了練習辨識，將數字修約到百位或千位
+        const step = raw > 1000000 ? 100000 : 1000;
         return Math.floor(raw / step) * step;
     }
 
-    // --- 印尼語拼寫邏輯 (支援至 Miliar) ---
+    // --- 強化版印尼語拼寫 (更符合口語讀法) ---
     function terbilang(n) {
         if (n === 0) return "";
         const words = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
         if (n < 12) return words[n];
         if (n < 20) return terbilang(n - 10) + " Belas";
-        if (n < 100) return terbilang(Math.floor(n / 10)) + " Puluh " + terbilang(n % 10);
+        if (n < 100) return (n < 20 ? words[n] : terbilang(Math.floor(n / 10)) + " Puluh ") + terbilang(n % 10);
         if (n < 200) return "Seratus " + terbilang(n - 100);
         if (n < 1000) return terbilang(Math.floor(n / 100)) + " Ratus " + terbilang(n % 100);
         if (n < 2000) return "Seribu " + terbilang(n - 1000);
@@ -85,46 +93,35 @@
         return "Rp " + n.toLocaleString('id-ID');
     }
 
-    function playFeedback(isCorrect) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        
-        if (isCorrect) {
-            osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.2);
-        } else {
-            osc.frequency.setValueAtTime(110, ctx.currentTime); // A2
-            osc.frequency.linearRampToValueAtTime(50, ctx.currentTime + 0.3);
-        }
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.start(); osc.stop(ctx.currentTime + 0.3);
-    }
-
     function nextQuestion() {
-        currentAmount = generateHugeAmount();
-        const display = document.getElementById('display-area');
-        const badge = document.getElementById('unit-label');
+        currentAmount = generateAmount();
+        hasHeard = false;
         
-        // 更新標籤提示面額等級
-        if (currentAmount >= 1000000000) badge.innerText = "等級：Miliar (十億)";
-        else if (currentAmount >= 1000000) badge.innerText = "等級：Juta (百萬)";
-        else badge.innerText = "等級：Ribu (千/萬)";
+        // 重置介面
+        document.getElementById('display-area').innerHTML = '<span style="color: #78909c;">請先聽語音...</span>';
+        document.getElementById('options').classList.add('hidden');
+        document.getElementById('unit-label').innerText = "挑戰中...";
 
-        display.innerHTML = '<span style="color: #78909c;">請聽語音選擇正確金額...</span>';
-        
-        // 產生更具威脅性的干擾項
+        // 產生具挑戰性的干擾項（位數干擾）
         let choices = [currentAmount];
+        const distractorLogic = [
+            currentAmount * 10,        // 多一個零
+            currentAmount / 10,        // 少一個零
+            currentAmount + 100000,    // 同級偏移
+            currentAmount - 1000       // 微小偏移
+        ];
+
+        distractorLogic.forEach(val => {
+            let v = Math.floor(Math.abs(val));
+            if (v > 0 && v !== currentAmount && choices.length < 4) choices.push(v);
+        });
+
+        // 如果干擾項不夠，隨機補齊
         while(choices.length < 4) {
-            // 在同一個數量級範圍內波動，或者隨機加減一位數
-            let factor = Math.random() > 0.5 ? 10 : 1;
-            let offset = (Math.floor(Math.random() * 5) - 2) * (1000 * factor);
-            if (currentAmount > 1000000) offset *= 100;
-            
-            let fake = Math.abs(currentAmount + offset);
-            if(fake > 0 && !choices.includes(fake)) choices.push(fake);
+            let randomOffset = currentAmount * (Math.random() > 0.5 ? 1.1 : 0.9);
+            choices.push(Math.floor(randomOffset / 1000) * 1000);
         }
+
         choices.sort(() => Math.random() - 0.5);
 
         const grid = document.getElementById('options');
@@ -133,36 +130,51 @@
             const b = document.createElement('button');
             b.className = 'opt';
             b.innerText = formatRp(amt);
-            b.onclick = () => {
-                if(amt === currentAmount) {
-                    playFeedback(true);
-                    display.innerHTML = `
-                        <div class="correct-msg">✓ Bagus! 正確答案</div>
-                        <div class="spell-out">${terbilang(currentAmount)} Rupiah</div>
-                    `;
-                } else {
-                    playFeedback(false);
-                    display.innerHTML = `<div class="wrong-msg">Salah! 答錯了，再試一次</div>`;
-                }
-            };
+            b.onclick = () => checkAnswer(amt);
             grid.appendChild(b);
         });
-        
-        speak();
+    }
+
+    function checkAnswer(amt) {
+        const display = document.getElementById('display-area');
+        if(amt === currentAmount) {
+            display.innerHTML = `
+                <div class="correct-msg">✓ Bagus! 正確答案</div>
+                <div class="spell-out">${terbilang(currentAmount)} Rupiah</div>
+            `;
+            document.getElementById('unit-label').innerText = "答對了！";
+        } else {
+            display.innerHTML = `<div style="color:#e57373">Salah! 答錯了，再試一次</div>`;
+        }
     }
 
     function speak() {
         synth.cancel();
-        const u = new SpeechSynthesisUtterance(currentAmount.toString());
-        u.lang = 'id-ID';
-        u.rate = 0.8;
-        synth.speak(u);
+        // 直接朗讀拼寫出來的印尼文，效果比直接讀數字精確
+        const utterance = new SpeechSynthesisUtterance(terbilang(currentAmount));
+        utterance.lang = 'id-ID';
+        utterance.rate = document.getElementById('rate-ctrl').value;
+        
+        utterance.onstart = () => {
+            document.getElementById('play-btn').style.boxShadow = "0 0 30px #ffca28";
+        };
+        
+        utterance.onend = () => {
+            document.getElementById('play-btn').style.boxShadow = "";
+            // 聽完後顯示選項
+            document.getElementById('options').classList.remove('hidden');
+            if(!hasHeard) {
+                document.getElementById('display-area').innerHTML = '<span style="color: #81c784;">請選擇正確金額</span>';
+                hasHeard = true;
+            }
+        };
+        
+        synth.speak(utterance);
     }
 
     document.getElementById('play-btn').onclick = speak;
     document.getElementById('next-btn').onclick = nextQuestion;
 
-    // 初始載入
     window.onload = nextQuestion;
 </script>
 
