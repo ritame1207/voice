@@ -75,29 +75,25 @@
         const now = audioCtx.currentTime;
 
         if (type === 'correct') {
-    osc.type = 'sine'; // 使用圓潤的正弦波
-    
-    // 「叮」：起音高頻
-    osc.frequency.setValueAtTime(659.25, now); // E5
-    
-    // 「咚」：在 0.15 秒後降到低頻
-    osc.frequency.exponentialRampToValueAtTime(523.25, now + 0.15); // C5
-    
-    // 音量淡出：讓聲音有餘韻
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6); 
-    
-    osc.start(now);
-    osc.stop(now + 0.6);
-        } else if (type === 'wrong') {
-    osc.type = 'square'; // 具備電玩警示感
-    osc.frequency.setValueAtTime(220, now); // 起音頻率 (A3)
-    osc.frequency.linearRampToValueAtTime(110, now + 0.2); // 0.2秒內降到極低音
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.2); 
-    osc.start(now);
-    osc.stop(now + 0.2);
-        }
+        // 答對：簡單的「嗶~」聲
+        osc.type = 'sine'; // 使用平滑的正弦波
+        osc.frequency.setValueAtTime(600, now); // 設定固定頻率為 600Hz
+        
+        gain.gain.setValueAtTime(0.2, now); // 設定音量
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5); // 0.5 秒後淡出
+        
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } else if (type === 'wrong') {
+        // 答錯：原本的低音下降警示
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
     }
 
     function generateAmount() {
