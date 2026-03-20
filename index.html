@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>印尼盾百億級聽力挑戰 - 音效強化版</title>
+    <title>印尼盾百億級聽力挑戰 - 雀躍拍手版</title>
     <style>
         :root { --primary: #c62828; --accent: #1565c0; --success: #2e7d32; --bg: #263238; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #eceff1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
@@ -26,15 +26,7 @@
         .correct-msg { color: #81c784; font-size: 1.2rem; font-weight: bold; }
         .spell-out { font-size: 1.1rem; color: #ffca28; margin-top: 10px; display: block; font-weight: bold; }
         .control-panel { margin-top: 15px; font-size: 0.9rem; color: #90a4ae; }
-    .short-form-tip {
-    background: rgba(77, 182, 172, 0.1);
-    border-left: 3px solid #4db6ac;
-    padding: 5px 10px;
-    display: inline-block;
-    border-radius: 4px;
-}
-
-</style>
+    </style>
 </head>
 <body>
 
@@ -44,14 +36,14 @@
     <p style="color: #b0bec5; font-size: 0.85rem;">先聽 🔊，聽完選項才會出現喔！</p>
     
     <div class="btn-group">
-        <button id="play-btn" class="main-btn" title="聽發音">🔊</button>
-        <button id="next-btn" class="main-btn" title="下一題">⏭️</button>
+        <button id="play-btn" class="main-btn">🔊</button>
+        <button id="next-btn" class="main-btn">⏭️</button>
     </div>
 
     <div class="options-grid hidden" id="options"></div>
 
     <div class="display-area" id="display-area">
-        <span style="color: #78909c;">點擊 🔊 開始訓練你的印尼語耳朵</span>
+        <span style="color: #78909c;">點擊 🔊 開始練習</span>
     </div>
 
     <div class="control-panel">
@@ -65,36 +57,50 @@
     const synth = window.speechSynthesis;
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    // --- 音效合成器 ---
+    // --- 雀躍音效與拍手聲 ---
     function playSound(type) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
         const now = audioCtx.currentTime;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         if (type === 'correct') {
-            // 答對：清脆的高音階上升 (C5 -> E5 -> G5)
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(523.25, now); // C5
-            osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
-            osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-            osc.start(now);
-            osc.stop(now + 0.4);
+            // 模擬拍手聲 (啪-啪！)
+            const playClap = (delay) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = 'sawtooth'; 
+                o.frequency.setValueAtTime(180, now + delay);
+                o.frequency.exponentialRampToValueAtTime(40, now + delay + 0.1);
+                g.gain.setValueAtTime(0, now + delay);
+                g.gain.linearRampToValueAtTime(0.3, now + delay + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.1);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(now + delay); o.stop(now + delay + 0.1);
+            };
+            playClap(0);
+            playClap(0.12);
+
+            // 加上雀躍的高音叮聲
+            const bell = audioCtx.createOscillator();
+            const bellG = audioCtx.createGain();
+            bell.type = 'sine';
+            bell.frequency.setValueAtTime(880, now + 0.2); 
+            bellG.gain.setValueAtTime(0, now + 0.2);
+            bellG.gain.linearRampToValueAtTime(0.2, now + 0.25);
+            bellG.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            bell.connect(bellG); bellG.connect(audioCtx.destination);
+            bell.start(now + 0.2); bell.stop(now + 0.5);
+
         } else if (type === 'wrong') {
-            // 答錯：沉悶的低音下降
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.linearRampToValueAtTime(70, now + 0.3);
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-            gain.gain.linearRampToValueAtTime(0, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
+            // 答錯：使用復古電玩感的方波
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'square';
+            o.frequency.setValueAtTime(220, now);
+            o.frequency.linearRampToValueAtTime(110, now + 0.2);
+            g.gain.setValueAtTime(0.15, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.2);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(now); o.stop(now + 0.2);
         }
     }
 
@@ -125,16 +131,14 @@
         return n.toString();
     }
 
-function getShortForm(n) {
-    if (n >= 1000000000) {
-        return (n / 1000000000).toLocaleString('id-ID') + " M (Miliar)";
-    } else if (n >= 1000000) {
-        return (n / 1000000).toLocaleString('id-ID') + " jt (Juta)";
-    } else if (n >= 1000) {
-        return (n / 1000).toLocaleString('id-ID') + " rb (Ribu)";
+    // 口語縮寫邏輯
+    function getShortForm(n) {
+        if (n >= 1000000000) return (n / 1000000000).toLocaleString('id-ID') + " M (Miliar)";
+        if (n >= 1000000) return (n / 1000000).toLocaleString('id-ID') + " jt (Juta)";
+        if (n >= 1000) return (n / 1000).toLocaleString('id-ID') + " rb (Ribu)";
+        return n.toString();
     }
-    return n.toString();
-}
+
     function formatRp(n) { return "Rp " + n.toLocaleString('id-ID'); }
 
     function nextQuestion() {
@@ -170,31 +174,28 @@ function getShortForm(n) {
     function checkAnswer(amt) {
         const display = document.getElementById('display-area');
         if(amt === currentAmount) {
-            playSound('correct'); // 播放答對音效
+            playSound('correct'); 
             display.innerHTML = `
                 <div class="correct-msg">✓ Bagus! 正確答案</div>
-               <div class="spell-out">${terbilang(currentAmount)} Rupiah</div>
-            <div style="color: #90a4ae; font-size: 0.9rem; margin-top: 5px;">
-                當地口語常說：<span style="color: #4db6ac; font-weight: bold;">${getShortForm(currentAmount)}</span>
-            </div>
-        `;
+                <div class="spell-out">${terbilang(currentAmount)} Rupiah</div>
+                <div style="color: #90a4ae; font-size: 0.9rem; margin-top: 5px;">
+                    當地口語常說：<span style="color: #4db6ac; font-weight: bold;">${getShortForm(currentAmount)}</span>
+                </div>
+            `;
             document.getElementById('unit-label').innerText = "答對了！";
         } else {
-            playSound('wrong'); // 播放答錯音效
+            playSound('wrong'); 
+            // 這裡使用了 1.6rem 的加粗字體
             display.innerHTML = `<div style="color:#e57373; font-size: 1.6rem; font-weight: bold;">Salah! 再聽一次</div>`;
         }
     }
 
     function speak() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         synth.cancel();
         const utterance = new SpeechSynthesisUtterance(terbilang(currentAmount));
         utterance.lang = 'id-ID';
         utterance.rate = document.getElementById('rate-ctrl').value;
-        
-        utterance.onstart = () => { document.getElementById('play-btn').style.boxShadow = "0 0 30px #ffca28"; };
         utterance.onend = () => {
-            document.getElementById('play-btn').style.boxShadow = "";
             document.getElementById('options').classList.remove('hidden');
             if(!hasHeard) {
                 document.getElementById('display-area').innerHTML = '<span style="color: #81c784;">請選擇正確金額</span>';
