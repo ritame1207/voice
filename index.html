@@ -74,65 +74,28 @@
 
         const now = audioCtx.currentTime;
 
-if (type === 'correct') {
-    // 拍手聲模擬：使用鋸齒波加上極短的衰減
-    const playClap = (delay) => {
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'sawtooth'; // 鋸齒波提供拍手的摩擦感
-        
-        // 拍手的中心頻率 (約 150-200 Hz 較紮實)
-        o.frequency.setValueAtTime(180, now + delay);
-        o.frequency.exponentialRampToValueAtTime(40, now + delay + 0.1);
-
-        g.gain.setValueAtTime(0, now + delay);
-        g.gain.linearRampToValueAtTime(0.3, now + delay + 0.01); // 瞬間爆發音
-        g.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.1); // 快速消散
-
-        o.connect(g);
-        g.connect(audioCtx.destination);
-        o.start(now + delay);
-        o.stop(now + delay + 0.1);
-    };
-
-    // 拍兩下：第一下在現在，第二下在 0.15 秒後
-    playClap(0);
-    playClap(0.15);
-    
-    // 額外加上一個高音「叮」，增加驚喜感
-    const bell = audioCtx.createOscillator();
-    const bellGain = audioCtx.createGain();
-    bell.type = 'sine';
-    bell.frequency.setValueAtTime(880, now + 0.2); // A5 高音
-    bellGain.gain.setValueAtTime(0, now + 0.2);
-    bellGain.gain.linearRampToValueAtTime(0.2, now + 0.25);
-    bellGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-    bell.connect(bellGain);
-    bellGain.connect(audioCtx.destination);
-    bell.start(now + 0.2);
-    bell.stop(now + 0.5);
-}
-   
-else if (type === 'wrong') {
-osc.type = 'triangle'; 
-    
-    // 設定三個快速上升的音階 (C5 -> E5 -> C6)
-    const startFreq = 523.25; // C5
-    const midFreq = 659.25;   // E5
-    const endFreq = 1046.50;  // C6 (高八度，增加驚喜感)
-
-    osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(midFreq, now + 0.08);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.15);
-
-    // 音量控制：快速開啟並緩慢淡出，製造餘韻
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.05); 
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-
-    osc.start(now);
-    osc.stop(now + 0.5);
-}
+        if (type === 'correct') {
+            // 答對：清脆的高音階上升 (C5 -> E5 -> G5)
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+            osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'wrong') {
+            // 答錯：沉悶的低音下降
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(70, now + 0.3);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
     }
 
     function generateAmount() {
