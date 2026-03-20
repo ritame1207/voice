@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>印尼盾百億級聽力挑戰 - 強化版</title>
+    <title>印尼盾百億級聽力挑戰 - 音效強化版</title>
     <style>
         :root { --primary: #c62828; --accent: #1565c0; --success: #2e7d32; --bg: #263238; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #eceff1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
@@ -16,7 +16,6 @@
         #next-btn { background: var(--accent); color: white; }
         .main-btn:active { transform: scale(0.9); }
         
-        /* 選項區塊：增加隱藏邏輯 */
         .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; transition: opacity 0.5s; }
         @media (min-width: 480px) { .options-grid { grid-template-columns: 1fr 1fr; } }
         .opt { background: #455a64; border: 2px solid #546e7a; padding: 18px; border-radius: 15px; cursor: pointer; font-size: 1.1rem; color: white; font-weight: 600; transition: 0.2s; }
@@ -34,7 +33,7 @@
 <div class="card">
     <div id="unit-label" class="level-badge">準備開始</div>
     <h1>印尼盾聽力挑戰</h1>
-    <p style="color: #b0bec5; font-size: 0.9rem;">提示：聽完語音後選項才會出現</p>
+    <p style="color: #b0bec5; font-size: 0.85rem;">先聽 🔊，聽完選項才會出現喔！</p>
     
     <div class="btn-group">
         <button id="play-btn" class="main-btn" title="聽發音">🔊</button>
@@ -44,11 +43,11 @@
     <div class="options-grid hidden" id="options"></div>
 
     <div class="display-area" id="display-area">
-        <span style="color: #78909c;">點擊紅色按鈕開始聽力測驗</span>
+        <span style="color: #78909c;">點擊 🔊 開始訓練你的印尼語耳朵</span>
     </div>
 
     <div class="control-panel">
-        語速：<input type="range" id="rate-ctrl" min="0.5" max="1" step="0.1" value="0.7">
+        語速：<input type="range" id="rate-ctrl" min="0.4" max="1" step="0.1" value="0.7">
     </div>
 </div>
 
@@ -56,24 +55,53 @@
     let currentAmount = 0;
     let hasHeard = false;
     const synth = window.speechSynthesis;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    // --- 金額產生器 ---
+    // --- 音效合成器 ---
+    function playSound(type) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'correct') {
+            // 答對：清脆的高音階上升 (C5 -> E5 -> G5)
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+            osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'wrong') {
+            // 答錯：沉悶的低音下降
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(70, now + 0.3);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+    }
+
     function generateAmount() {
         const ranges = [
-            { min: 1000, max: 99000 },             // Ribu
-            { min: 100000, max: 999000 },          // Ratus Ribu
-            { min: 1000000, max: 99000000 },       // Juta
-            { min: 100000000, max: 999000000 },    // Ratus Juta
-            { min: 1000000000, max: 10000000000 }  // Miliar
+            { min: 1000, max: 99000 }, { min: 100000, max: 999000 },
+            { min: 1000000, max: 99000000 }, { min: 100000000, max: 999000000 },
+            { min: 1000000000, max: 10000000000 }
         ];
         const range = ranges[Math.floor(Math.random() * ranges.length)];
         const raw = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
-        // 為了練習辨識，將數字修約到百位或千位
         const step = raw > 1000000 ? 100000 : 1000;
         return Math.floor(raw / step) * step;
     }
 
-    // --- 強化版印尼語拼寫 (更符合口語讀法) ---
     function terbilang(n) {
         if (n === 0) return "";
         const words = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
@@ -89,39 +117,25 @@
         return n.toString();
     }
 
-    function formatRp(n) {
-        return "Rp " + n.toLocaleString('id-ID');
-    }
+    function formatRp(n) { return "Rp " + n.toLocaleString('id-ID'); }
 
     function nextQuestion() {
         currentAmount = generateAmount();
         hasHeard = false;
-        
-        // 重置介面
         document.getElementById('display-area').innerHTML = '<span style="color: #78909c;">請先聽語音...</span>';
         document.getElementById('options').classList.add('hidden');
         document.getElementById('unit-label').innerText = "挑戰中...";
 
-        // 產生具挑戰性的干擾項（位數干擾）
         let choices = [currentAmount];
-        const distractorLogic = [
-            currentAmount * 10,        // 多一個零
-            currentAmount / 10,        // 少一個零
-            currentAmount + 100000,    // 同級偏移
-            currentAmount - 1000       // 微小偏移
-        ];
-
+        const distractorLogic = [currentAmount * 10, currentAmount / 10, currentAmount + 100000, currentAmount - 1000];
         distractorLogic.forEach(val => {
             let v = Math.floor(Math.abs(val));
             if (v > 0 && v !== currentAmount && choices.length < 4) choices.push(v);
         });
-
-        // 如果干擾項不夠，隨機補齊
         while(choices.length < 4) {
             let randomOffset = currentAmount * (Math.random() > 0.5 ? 1.1 : 0.9);
             choices.push(Math.floor(randomOffset / 1000) * 1000);
         }
-
         choices.sort(() => Math.random() - 0.5);
 
         const grid = document.getElementById('options');
@@ -138,43 +152,39 @@
     function checkAnswer(amt) {
         const display = document.getElementById('display-area');
         if(amt === currentAmount) {
+            playSound('correct'); // 播放答對音效
             display.innerHTML = `
                 <div class="correct-msg">✓ Bagus! 正確答案</div>
                 <div class="spell-out">${terbilang(currentAmount)} Rupiah</div>
             `;
             document.getElementById('unit-label').innerText = "答對了！";
         } else {
-            display.innerHTML = `<div style="color:#e57373">Salah! 答錯了，再試一次</div>`;
+            playSound('wrong'); // 播放答錯音效
+            display.innerHTML = `<div style="color:#e57373; font-size: 1.6rem; font-weight: bold;">Salah! 再聽一次</div>`;
         }
     }
 
     function speak() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         synth.cancel();
-        // 直接朗讀拼寫出來的印尼文，效果比直接讀數字精確
         const utterance = new SpeechSynthesisUtterance(terbilang(currentAmount));
         utterance.lang = 'id-ID';
         utterance.rate = document.getElementById('rate-ctrl').value;
         
-        utterance.onstart = () => {
-            document.getElementById('play-btn').style.boxShadow = "0 0 30px #ffca28";
-        };
-        
+        utterance.onstart = () => { document.getElementById('play-btn').style.boxShadow = "0 0 30px #ffca28"; };
         utterance.onend = () => {
             document.getElementById('play-btn').style.boxShadow = "";
-            // 聽完後顯示選項
             document.getElementById('options').classList.remove('hidden');
             if(!hasHeard) {
                 document.getElementById('display-area').innerHTML = '<span style="color: #81c784;">請選擇正確金額</span>';
                 hasHeard = true;
             }
         };
-        
         synth.speak(utterance);
     }
 
     document.getElementById('play-btn').onclick = speak;
     document.getElementById('next-btn').onclick = nextQuestion;
-
     window.onload = nextQuestion;
 </script>
 
